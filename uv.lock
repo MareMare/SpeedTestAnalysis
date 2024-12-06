@@ -6,6 +6,9 @@ resolution-markers = [
     "python_full_version >= '3.12'",
 ]
 
+[manifest]
+constraints = [{ name = "kaleido", specifier = "!=0.2.1.post1" }]
+
 [[package]]
 name = "numpy"
 version = "2.1.3"

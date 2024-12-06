@@ -2,8 +2,9 @@ import os
 import sys
 
 import pandas as pd  # type: ignore
+import plotly  # type: ignore
 import plotly.graph_objects as go  # type: ignore
-import pytz
+import pytz  # type: ignore
 
 
 def load_and_prepare_data(file_path: str) -> pd.DataFrame:
@@ -103,6 +104,12 @@ def save_as_html(fig: go.Figure, file_path: str) -> None:
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     fig.write_html(file_path)
 
+def save_as_offline_html(fig: go.Figure, file_path: str) -> None:
+    """ グラフをHTMLファイルとして保存 """
+    # ディレクトリを作成
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    plotly.offline.plot(fig, filename=file_path)
+
 
 def main():
     print(sys.version)
@@ -114,7 +121,7 @@ def main():
     fig = plot_graph(new_df, median_df)
 
     # HTMLとして保存
-    save_as_html(fig, "dist/index.html")
+    save_as_offline_html(fig, "dist/index.html")
 
     # フィギュアを表示する場合
     fig.show()
