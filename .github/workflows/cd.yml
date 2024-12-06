@@ -1,0 +1,38 @@
+name: CD
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "main"
+    paths:
+      - "*.py"
+      - "*.toml"
+      - "**/*.csv"
+
+  pull_request:
+    branches:
+      - "main"
+    paths:
+      - "*.py"
+      - "*.toml"
+      - "**/*.csv"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version-file: ".python-version"
+    - name: Install the project
+      run: uc sync --all-extras --dev
+    - name: Run app
+      run: uv run analysis.py
+# TODO: デプロイ
