@@ -32,6 +32,12 @@ This project uses GitHub Actions for continuous deployment. When a CSV file is c
 ### Deployment URL
 Upon successful deployment, the URL of the deployed site is printed in the GitHub Actions summary.
 
+## Related Repositories
+The following are related repositories:
+- [CloudflareSpeedTester](https://github.com/MareMare/CloudflareSpeedTester)
+- [GitHubCommit](https://github.com/MareMare/GitHubCommit)
+- [SpeedTestAnalysis](https://github.com/MareMare/SpeedTestAnalysis)
+
 ## Developer Notes
 <details><summary>notes for me</summary>
 
