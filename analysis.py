@@ -1,5 +1,6 @@
 import os
 import sys
+from datetime import datetime
 
 import pandas as pd  # type: ignore
 import plotly  # type: ignore
@@ -50,6 +51,12 @@ def calculate_medians(new_df: pd.DataFrame) -> pd.DataFrame:
 
 def plot_graph(new_df: pd.DataFrame, median_df: pd.DataFrame) -> go.Figure:
     """ グラフを作成し表示する """
+    jst = pytz.timezone('Asia/Tokyo')
+    # 現在のUTC時間を取得し、JSTに変換
+    now_utc = datetime.now(pytz.utc)
+    now_jst = now_utc.astimezone(jst)
+    formatted_time = now_jst.strftime('%Y-%m-%d %H:%M:%S')
+
     fig = go.Figure()
 
     fig.add_trace(
@@ -89,7 +96,7 @@ def plot_graph(new_df: pd.DataFrame, median_df: pd.DataFrame) -> go.Figure:
     ))
 
     fig.update_layout(
-        title="Downloaded Mbps & Uploaded Mbps by Time (with Medians)",
+        title=f"Downloaded Mbps & Uploaded Mbps by Time (with Medians) - {formatted_time} JST",
         xaxis_title="Day - Hour",
         yaxis_title="Speed (Mbps)",
         boxmode='group',
@@ -111,6 +118,24 @@ def save_as_offline_html(fig: go.Figure, file_path: str) -> None:
     plotly.offline.plot(fig, filename=file_path)
 
 
+def add_japanese_metadata(html_file_path: str) -> None:
+    """ HTMLファイルに日本語メタデータを追加 """
+    with open(html_file_path, 'r', encoding='utf-8') as file:
+        html_content = file.read()
+
+    # メタタグを <head> に追加
+    new_meta_tags = '''
+<meta name="language" content="ja" />
+<meta http-equiv="Content-Language" content="ja" />
+'''
+
+    # </head> の直前にメタタグを挿入
+    html_content = html_content.replace('</head>', new_meta_tags + '</head>', 1)
+
+    with open(html_file_path, 'w', encoding='utf-8') as file:
+        file.write(html_content)
+
+
 def main():
     print(sys.version)
     print(sys.executable)
@@ -121,7 +146,9 @@ def main():
     fig = plot_graph(new_df, median_df)
 
     # HTMLとして保存
-    save_as_offline_html(fig, "dist/index.html")
+    html_file_path = "dist/index.html"
+    save_as_offline_html(fig, html_file_path)
+    add_japanese_metadata(html_file_path)
 
     # フィギュアを表示する場合
     fig.show()
