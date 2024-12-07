@@ -20,6 +20,13 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+env:
+  PAGES_PROJECTNAME: speedtestspeedtestanalysis
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -35,4 +42,15 @@ jobs:
       run: uv sync --all-extras --dev
     - name: Run app
       run: uv run analysis.py
-# TODO: デプロイ
+
+    - name: 🚢 Deploy to Cloudflare Pages
+      id: cloudflare_pages_deploy
+      uses: cloudflare/wrangler-action@v3.13.0
+      with:
+        apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        command: pages deploy dist --project-name=${{ env.PAGES_PROJECTNAME }} --commit-dirty=true
+    - name: 📖 Print deployment URL
+      env:
+        DEPLOYMENT_URL: ${{ steps.cloudflare_pages_deploy.outputs.deployment-url }}
+      run: echo "### ✅ Deploy succeeded! ${{ env.DEPLOYMENT_URL }} 🌟" >> $GITHUB_STEP_SUMMARY
