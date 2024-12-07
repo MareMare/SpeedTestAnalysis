@@ -15,6 +15,9 @@ This project analyzes internet speed test data and visualizes the results using 
 - The script generates an HTML file containing the plot, which is saved in the dist directory.
 - Upon commit, the results are automatically deployed to Cloudflare Pages.
 
+> [!NOTE]
+> I know my internet connection is bad. lol
+
 ## Continuous Deployment
 
 This project uses GitHub Actions for continuous deployment. When a CSV file is committed, the analysis.py script is automatically executed, and the results are deployed to Cloudflare Pages. The deployment process is defined in [`cd.yml`](.github/workflows/cd.yml)
