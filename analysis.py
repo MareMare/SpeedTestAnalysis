@@ -30,6 +30,7 @@ def load_and_prepare_data(file_path: str) -> pd.DataFrame:
 
     selected_columns = ['StartedAt_JST', '曜日', '曜日番号', '時間', 'DownloadedMbps', 'UploadedMbps']
     new_df = df[selected_columns].copy()
+    new_df = new_df.sort_values(by=['曜日番号', '時間'])
     return new_df
 
 
