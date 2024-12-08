@@ -6,6 +6,7 @@ import pandas as pd  # type: ignore
 import plotly  # type: ignore
 import plotly.graph_objects as go  # type: ignore
 import pytz  # type: ignore
+from plotly.subplots import make_subplots  # type: ignore
 
 
 def load_and_prepare_data(file_path: str) -> pd.DataFrame:
@@ -30,14 +31,13 @@ def load_and_prepare_data(file_path: str) -> pd.DataFrame:
 
     selected_columns = ['StartedAt_JST', '曜日', '曜日番号', '時間', 'DownloadedMbps', 'UploadedMbps']
     new_df = df[selected_columns].copy()
-    new_df = new_df.sort_values(by=['曜日番号', '時間'])
     return new_df
 
 
-def calculate_medians(new_df: pd.DataFrame) -> pd.DataFrame:
+def calculate_medians(prepared_df: pd.DataFrame) -> pd.DataFrame:
     """ データフレームから中央値を計算 """
     median_df = (
-        new_df.assign(箱ひげキー=lambda x: x['曜日'] + '-' + x['時間'].astype(str))
+        prepared_df.assign(箱ひげキー=lambda x: x['曜日'] + '-' + x['時間'].astype(str))
         .groupby(['曜日', '時間', '曜日番号'])
         .agg({
             'DownloadedMbps': 'median',
@@ -50,67 +50,135 @@ def calculate_medians(new_df: pd.DataFrame) -> pd.DataFrame:
     return median_df
 
 
-def plot_graph(new_df: pd.DataFrame, median_df: pd.DataFrame) -> go.Figure:
-    """ グラフを作成し表示する """
+def add_box_plot_traces(fig: go.Figure, prepared_df: pd.DataFrame) -> None:
+    """グラフにボックスプロットのトレースを追加する"""
+    sorted_df = prepared_df.sort_values(by=['曜日番号', '時間'])
+
+    # ダウンロード速度のボックスプロット
+    fig.add_trace(
+        go.Box(
+            y=sorted_df['DownloadedMbps'],
+            x=sorted_df['曜日'].astype(str) + '-' + sorted_df['時間'].astype(str),
+            boxmean='sd',
+            marker=dict(color='skyblue'),
+            name='Download'
+        ),
+        row=1, col=1
+    )
+
+    # アップロード速度のボックスプロット
+    fig.add_trace(
+        go.Box(
+            y=sorted_df['UploadedMbps'],
+            x=sorted_df['曜日'].astype(str) + '-' + sorted_df['時間'].astype(str),
+            boxmean='sd',
+            marker=dict(color='orange'),
+            name='Upload'
+        ),
+        row=1, col=1
+    )
+
+
+def add_line_plot_traces(fig: go.Figure, prepared_df: pd.DataFrame) -> None:
+    """グラフに折れ線グラフのトレースを追加する"""
+    median_df = calculate_medians(prepared_df)
+
+    # ダウンロード速度の中央値線
+    fig.add_trace(
+        go.Scatter(
+            x=median_df['箱ひげキー'],
+            y=median_df['DownloadedMbps'],
+            mode='lines+markers',
+            marker=dict(color='blue'),
+            name='Download Median'
+        ),
+        row=1, col=1
+    )
+
+    # アップロード速度の中央値線
+    fig.add_trace(
+        go.Scatter(
+            x=median_df['箱ひげキー'],
+            y=median_df['UploadedMbps'],
+            mode='lines+markers',
+            marker=dict(color='red'),
+            name='Upload Median'
+        ),
+        row=1, col=1
+    )
+
+
+def add_table(fig: go.Figure, prepared_df: pd.DataFrame) -> None:
+    """グラフにテーブルを追加する"""
+    sorted_df = prepared_df.sort_values(by='StartedAt_JST', ascending=False)
+
+    fig.add_trace(
+        go.Table(
+            header=dict(
+                values=["StartedAt JST", "曜日", "曜日番号", "時間", "DownloadedMbps", "UploadedMbps"],
+                fill_color='paleturquoise',
+                align='left'
+            ),
+            cells=dict(
+                values=[sorted_df[col] for col in sorted_df.columns],
+                fill_color='lavender',
+                align='left'
+            )
+        ),
+        row=2, col=1
+    )
+
+
+def update_figure_layout(fig: go.Figure):
+    """グラフレイアウトを更新する"""
     jst = pytz.timezone('Asia/Tokyo')
     # 現在のUTC時間を取得し、JSTに変換
     now_utc = datetime.now(pytz.utc)
     now_jst = now_utc.astimezone(jst)
     formatted_time = now_jst.strftime('%Y-%m-%d %H:%M:%S')
 
-    fig = go.Figure()
-
-    fig.add_trace(
-        go.Box(
-            y=new_df['DownloadedMbps'],
-            x=new_df['曜日'].astype(str) + '-' + new_df['時間'].astype(str),
-            boxmean='sd',
-            marker=dict(color='skyblue'),
-            name='Download'
-        )
-    )
-
-    fig.add_trace(
-        go.Box(
-            y=new_df['UploadedMbps'],
-            x=new_df['曜日'].astype(str) + '-' + new_df['時間'].astype(str),
-            boxmean='sd',
-            marker=dict(color='orange'),
-            name='Upload'
-        )
-    )
-
-    fig.add_trace(go.Scatter(
-        x=median_df['箱ひげキー'],
-        y=median_df['DownloadedMbps'],
-        mode='lines+markers',
-        marker=dict(color='blue'),
-        name='Download Median'
-    ))
-
-    fig.add_trace(go.Scatter(
-        x=median_df['箱ひげキー'],
-        y=median_df['UploadedMbps'],
-        mode='lines+markers',
-        marker=dict(color='red'),
-        name='Upload Median'
-    ))
-
     fig.update_layout(
         title=f"Downloaded Mbps & Uploaded Mbps by Time (with Medians) - {formatted_time} JST",
-        xaxis_title="Day - Hour",
+        #xaxis_title="Day - Hour",
         yaxis_title="Speed (Mbps)",
         boxmode='group',
         showlegend=True,
     )
 
+
+def plot_graph_with_table(prepared_df: pd.DataFrame) -> go.Figure:
+    """ グラフを作成し表示する """
+
+    # fig = go.Figure()
+    # グラフとテーブルを配置するためのサブプロットを生成
+    fig = make_subplots(
+        rows=2, cols=1,
+        row_heights=[0.7, 0.3],
+        specs=[
+            [{"type": "xy"}],
+            [{"type": "table"}]
+        ],
+        subplot_titles=("Box and Line Plots", "Data Table"),
+        vertical_spacing=0.1
+    )
+
+    # 各プロットやテーブルを追加
+    add_box_plot_traces(fig, prepared_df)
+    add_line_plot_traces(fig, prepared_df)
+    add_table(fig, prepared_df)
+
+    # レイアウトの更新
+    update_figure_layout(fig)
+
     return fig
+
 
 def save_as_html(fig: go.Figure, file_path: str) -> None:
     """ グラフをHTMLファイルとして保存 """
     # ディレクトリを作成
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     fig.write_html(file_path)
+
 
 def save_as_offline_html(fig: go.Figure, file_path: str) -> None:
     """ グラフをHTMLファイルとして保存 """
@@ -142,9 +210,8 @@ def main():
     print(sys.executable)
 
     file_path = 'data/sampling.csv'
-    new_df = load_and_prepare_data(file_path)
-    median_df = calculate_medians(new_df)
-    fig = plot_graph(new_df, median_df)
+    prepared_df = load_and_prepare_data(file_path)
+    fig = plot_graph_with_table(prepared_df)
 
     # HTMLとして保存
     html_file_path = "dist/index.html"
