@@ -102,23 +102,17 @@ def add_line_plot_traces(fig: go.Figure, prepared_df: pd.DataFrame) -> None:
     )
 
 
-def update_figure_layout(fig: go.Figure):
+def update_figure_layout(fig: go.Figure, title: str):
     """グラフレイアウトを更新する"""
-    jst = pytz.timezone('Asia/Tokyo')
-    # 現在のUTC時間を取得し、JSTに変換
-    now_utc = datetime.now(pytz.utc)
-    now_jst = now_utc.astimezone(jst)
-    formatted_time = now_jst.strftime('%Y-%m-%d %H:%M:%S')
-
     fig.update_layout(
-        title=f"Downloaded Mbps & Uploaded Mbps by Time (with Medians) - {formatted_time} JST",
+        title=title,
         xaxis_title="Day - Hour",
         yaxis_title="Speed (Mbps)",
         boxmode='group',
         showlegend=True,
     )
 
-def plot_graph(prepared_df: pd.DataFrame) -> go.Figure:
+def plot_graph(prepared_df: pd.DataFrame, title: str) -> go.Figure:
     """ グラフを作成し表示する """
     fig = go.Figure()
 
@@ -126,7 +120,7 @@ def plot_graph(prepared_df: pd.DataFrame) -> go.Figure:
     add_line_plot_traces(fig, prepared_df)
 
     # レイアウトの更新
-    update_figure_layout(fig)
+    update_figure_layout(fig, title)
 
     return fig
 
@@ -163,22 +157,131 @@ def add_japanese_metadata(html_file_path: str) -> None:
         file.write(html_content)
 
 
+def generate_index_html(html_file_path: str, past_html_path: str, latest_html_path: str, past_title: str = 'Past Graphs', latest_title: str = 'Latest Graphs'):
+    """
+    2つのHTMLファイルへのリンクを含むindex.htmlを生成。
+    """
+    # html_file_pathを基準にした相対パスを計算
+    past_relative_path = os.path.relpath(past_html_path, start=os.path.dirname(html_file_path))
+    current_relative_path = os.path.relpath(latest_html_path, start=os.path.dirname(html_file_path))
+
+    index_content = f"""
+    <!DOCTYPE html>
+    <html lang="ja">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body>
+        <nav>
+            <h1>SpeedTest Analysis Graphs</h1>
+            <ul>
+                <li><a href="{past_relative_path}" target="_blank">{past_title}</a></li>
+                <li><a href="{current_relative_path}" target="_blank">{latest_title}</a></li>
+            </ul>
+        </nav>
+    </body>
+    </html>
+    """
+    with open(html_file_path, "w", encoding="utf-8") as file:
+        file.write(index_content)
+    print("index.html を生成しました。")
+
+
+def generate_graph_html(csv_file_path: str, html_file_path: str, title: str):
+    """
+    グラフを生成しHTMLファイルに保存、
+    日本語メタデータを追加する共通処理
+    """
+    # グラフの生成
+    prepared_df = load_and_prepare_data(csv_file_path)
+    fig = plot_graph(prepared_df, title)
+    # HTMLとして保存
+    save_as_offline_html(fig, html_file_path)
+    add_japanese_metadata(html_file_path)
+    print(f"'{html_file_path}' の生成が完了しました。")
+
+
+def get_date_range_in_jst(csv_file_path: str, datetime_column: str = 'timestamp') -> tuple[str, str]:
+    """
+    指定されたCSVから最古と最新の日時をJSTで取得します。
+
+    Parameters:
+        csv_file_path (str): 読み込むCSVファイルのパス
+        datetime_column (str): 日時情報を含むカラム名（デフォルトは'timestamp'）
+
+    Returns:
+        (str, str): JSTの最古と最新の日時文字列
+    """
+    # CSVファイルをDataFrameとして読み込む
+    df = pd.read_csv(csv_file_path)
+
+    # 指定された日時列をDatetime型に変換
+    df[datetime_column] = pd.to_datetime(df[datetime_column], utc=True)
+
+    # 最古と最新の日時を取得
+    min_timestamp_utc = df[datetime_column].min()
+    max_timestamp_utc = df[datetime_column].max()
+
+    # JSTに変換
+    jst = pytz.timezone('Asia/Tokyo')
+    min_timestamp_jst = min_timestamp_utc.astimezone(jst)
+    max_timestamp_jst = max_timestamp_utc.astimezone(jst)
+
+    # フォーマット整形
+    min_timestamp_str = min_timestamp_jst.strftime('%Y-%m-%d %H:%M')
+    max_timestamp_str = max_timestamp_jst.strftime('%Y-%m-%d %H:%M')
+
+    return min_timestamp_str, max_timestamp_str
+
+
+def get_current_jst_time() -> str:
+    """
+    現在のUTC時間をJSTに変換して文字列返却
+    """
+    jst = pytz.timezone('Asia/Tokyo')
+    now_utc = datetime.now(pytz.utc)
+    now_jst = now_utc.astimezone(jst)
+    return now_jst.strftime('%Y-%m-%d %H:%M')
+
+
 def main():
     print(sys.version)
     print(sys.executable)
 
-    file_path = 'data/sampling.csv'
-    prepared_df = load_and_prepare_data(file_path)
-    fig = plot_graph(prepared_df)
+    # 現在時間JSTを取得
+    formatted_time = get_current_jst_time()
 
-    # HTMLとして保存
-    html_file_path = "dist/index.html"
-    save_as_offline_html(fig, html_file_path)
-    add_japanese_metadata(html_file_path)
+    past_csv_file_path = 'data/sampling_20250319_1229.csv'
+    past_html_file_path = 'dist/past_graph.html'
+    past_min_date, past_max_date = get_date_range_in_jst(past_csv_file_path, datetime_column='StartedAt')
+    past_graph_title = f"Downloaded Mbps & Uploaded Mbps by Time (with Medians) - {past_min_date} → {past_max_date}"
+    # 過去データのグラフ生成
+    generate_graph_html(
+        csv_file_path=past_csv_file_path,
+        html_file_path=past_html_file_path,
+        title=past_graph_title
+    )
 
-    # フィギュアを表示する場合
-    fig.show()
+    latest_csv_file_path = 'data/sampling.csv'
+    latest_html_file_path = 'dist/latest_graph.html'
+    latest_min_date, latest_max_date = get_date_range_in_jst(latest_csv_file_path, datetime_column='StartedAt')
+    latest_graph_title = f"Downloaded Mbps & Uploaded Mbps by Time (with Medians) Updated: {formatted_time}"
+    # 現在データのグラフ生成
+    generate_graph_html(
+        csv_file_path=latest_csv_file_path,
+        html_file_path=latest_html_file_path,
+        title=latest_graph_title
+    )
 
+    # index.html の生成
+    index_html_file_path = "dist/index.html"
+    generate_index_html(
+        index_html_file_path,
+        past_html_file_path,
+        latest_html_file_path,
+        past_title=f'{past_min_date} → {past_max_date}: Past',
+        latest_title=f'{latest_min_date} → {latest_max_date}: Latest')
 
 if __name__ == "__main__":
     main()
