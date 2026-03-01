@@ -129,7 +129,11 @@ def save_as_html(fig: go.Figure, file_path: str) -> None:
     """ グラフをHTMLファイルとして保存 """
     # ディレクトリを作成
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
-    fig.write_html(file_path)
+    fig.write_html(
+        file_path,
+        include_plotlyjs='cdn',
+        full_html=True,
+        )
 
 
 def save_as_offline_html(fig: go.Figure, file_path: str) -> None:
@@ -197,7 +201,7 @@ def generate_graph_html(csv_file_path: str, html_file_path: str, title: str):
     prepared_df = load_and_prepare_data(csv_file_path)
     fig = plot_graph(prepared_df, title)
     # HTMLとして保存
-    save_as_offline_html(fig, html_file_path)
+    save_as_html(fig, html_file_path)
     add_japanese_metadata(html_file_path)
     print(f"'{html_file_path}' の生成が完了しました。")
 
