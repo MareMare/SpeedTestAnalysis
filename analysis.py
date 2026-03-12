@@ -175,14 +175,96 @@ def generate_index_html(html_file_path: str, past_html_path: str, latest_html_pa
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>SpeedTest Analysis Graphs</title>
+        <style>
+            body {{
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                margin: 40px auto;
+                max-width: 800px;
+                line-height: 1.6;
+                padding: 0 20px;
+                color: #333;
+            }}
+            h1 {{
+                border-bottom: 2px solid #f0f0f0;
+                padding-bottom: 10px;
+            }}
+            /* リストのデザイン */
+            ul {{
+                list-style: none;
+                padding: 0;
+            }}
+            li {{
+                margin: 15px 0;
+            }}
+            li a {{
+                display: block;
+                padding: 15px;
+                background: #fff;
+                border: 1px solid #e1e4e8;
+                border-radius: 8px;
+                text-decoration: none;
+                color: #0366d6;
+                transition: all 0.2s;
+            }}
+            li a:hover {{
+                background-color: #f6f8fa;
+                transform: translateX(5px);
+            }}
+            .footer-link {{
+                margin-top: 50px;
+                padding-top: 20px;
+                border-top: 1px solid #eee;
+                font-size: 0.85em;
+                color: #666;
+            }}        
+            /* GitHubリンクのスタイル */
+            .github-container {{
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                text-decoration: none;
+                color: #24292e;
+                font-weight: bold;
+                margin: 10px 0 20px 0;
+                padding: 5px 10px;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                background-color: #fafbfc;
+            }}
+            .github-container:hover {{
+                background-color: #f3f4f6;
+                border-color: #bbb;
+            }}
+            .github-logo {{
+                width: 20px;
+                height: 20px;
+            }}
+            .footer-link {{
+                margin-top: 30px;
+                padding-top: 10px;
+                border-top: 1px solid #eee;
+                font-size: 0.9em;
+            }}
+        </style>
     </head>
     <body>
         <nav>
             <h1>SpeedTest Analysis Graphs</h1>
+
+            <a href="https://github.com/MareMare/SpeedTestAnalysis" target="_blank" rel="noopener noreferrer" class="github-container">
+                <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" alt="GitHub Logo" class="github-logo">
+                <span>View on GitHub</span>
+            </a>
+
             <ul>
-                <li><a href="{past_relative_path}" target="_blank">{past_title}</a></li>
-                <li><a href="{current_relative_path}" target="_blank">{latest_title}</a></li>
+                <li><a href="{past_relative_path}" target="_blank">📊 {past_title}</a></li>
+                <li><a href="{current_relative_path}" target="_blank">📈 {latest_title}</a></li>
             </ul>
+
+            <div class="footer-link">
+                <p>Source code is available on <a href="https://github.com/MareMare/SpeedTestAnalysis" target="_blank" rel="noopener noreferrer">GitHub</a>.</p>
+            </div>
         </nav>
     </body>
     </html>
